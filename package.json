@@ -1,0 +1,18 @@
+{
+  "name": "getstart",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-packager ./ main --platform=win32 --arch=x64 --electron-version=10.1.3 --icon=work.ico --asar=true --out=daliy_r --ignore=node_modules/electron-* --version-string.CompanyName=MyApp --version-string.ProductName=MyApp",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^10.1.3",
+    "electron-packager": "^15.1.0",
+    "electron-winstaller": "^4.0.1"
+  }
+}

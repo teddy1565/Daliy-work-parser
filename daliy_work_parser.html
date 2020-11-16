@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>command generator</title>
+        <style>
+            body{
+                text-align: left;
+                background-color: pink;
+            }
+        </style>
+    </head>
+    <body>
+        <div style="position:fixed;width: 100px;height:30px;text-align:center;top:0px;left: 800px;">
+            <div id="iframe_display_control">
+                <div id="iframe_block">
+                    <iframe src="http://www.emecca.com.tw/timesheet/" width="900px" height="850px"></iframe>
+                </div>
+            </div>
+            <div id="iframe_display_control_button" style="text-align: center;">
+                <input type="hidden" id="iframe_state" value="1">
+                <input type="button" onclick="change_display()" id="control_btn" value="不要顯示網站">
+            </div>
+        </div>
+
+        <input type="text" id="origin_text"><input type="button" onclick="reload()" value="重整"><br>
+        <input type="button" onclick="last_dist()" value="上一筆">
+        <input type="button" onclick="generator()" value="生成">
+        <input type="button" onclick="next_dist()" value="下一筆">
+        <input type="hidden" id="dist_ID" value="1">
+        <input type="hidden" id="la_dist_ID" value="1">
+        <div id="command_generator_district"></div>
+    </body>
+</html>
+<script>
+    change_display();
+    function change_display(){
+        let state = document.getElementById("iframe_state").value;
+        if(state%2==1){
+            document.getElementById("iframe_state").value = "2";
+            document.getElementById("iframe_display_control").style="display:none";
+            document.getElementById("control_btn").value="顯示網站";
+        }else if(state%2==0){
+            document.getElementById("iframe_state").value = "1";
+            document.getElementById("iframe_display_control").style="display:block";
+            document.getElementById("control_btn").value="不要顯示網站";
+        }
+    }
+    function generator(){
+        let district_dicationary = [/^(和平|忠孝|仁愛|陽明|中興|昆明|林森|婦幼|松德|中醫|院本部|馬祖|南竿|北竿|西莒|東莒|東引)+(?!報告|醫師|資訊)[院區]*/,"===","***"];
+        let user_dicationary = [/^(開刀房|資--|心電圖|眼|小兒|胸腔內|心臟|泌尿|新陳代謝|新陳|神經內科|神經|內視鏡|胃鏡室|胃鏡|超音波|婦產|復健|胸腔|健檢中心|健檢|放射|核醫|牙|ICU)+(?!資訊|報告|醫師)[科]*/];
+        let input_str = document.getElementById("origin_text").value;//速記字串(資料)
+        let display_str = input_str.replace(/;/g,"<br>");
+        input_str = input_str.split(';');
+        let data = input_str.map((x)=>{
+            let temp="";
+            for(let i=0;i<x.length;i++){
+                if(x[i]!=" "&&x[i]!=""){
+                    temp+=x[i];
+                }
+            }
+            return temp;
+        });
+        data = data.map((x)=>{ //過濾院區
+            let compare_str = x;
+            for(let i=0;i<district_dicationary.length;i++){
+                x = x.replace(district_dicationary[i],"");
+            }
+            compare_str = compare_str.replace(x,"");
+            if(compare_str.match(/院區/)==null&&compare_str!=""&&compare_str.match(/^(馬祖|南竿|北竿|東引|東莒|西莒)+/)==null)compare_str+="院區";
+            else if(compare_str.match(/院區/)==null&&compare_str!=""&&compare_str.match(/^[馬祖]*(北竿|東引|東莒|西莒)+/)!=null){
+                if(x.match(/^[放射科]+/)==null)x = x.replace(x,`放射科${x}`);
+                compare_str+="衛生所";
+            }
+            else if(compare_str.match(/院區/)==null&&compare_str!=""&&compare_str.match(/^[馬祖]*(南竿)+/)!=null){
+                if(x.match(/^[放射科]+/)==null)x = x.replace(x,`放射科${x}`);
+                compare_str+="縣立醫院";
+            }
+            let xresult = [compare_str,x];
+            return xresult;
+        });
+        data = data.map((x)=>{//過濾單位
+            let compare_str = x[1];
+            for(let i=0;i<user_dicationary.length;i++){
+                x = [x[0],x[1].replace(user_dicationary[i],"")];
+            }
+            compare_str = compare_str.replace(x[1],"");
+            if(compare_str.match(/^(眼|心臟|核醫|放射|泌尿|神經|牙|胸腔內|婦產)$/)!=null)compare_str+="科";
+            else if(compare_str.match(/^(健檢)$/)!=null)compare_str+="中心";
+            else if(compare_str.match(/^(胸腔)$/)!=null)compare_str+="內科";
+            else if(compare_str.match(/^(胃鏡)$/)!=null)compare_str+="室";
+            else if(compare_str.match(/^(資--)$/)!=null)compare_str="資訊室";
+            else if(compare_str.match(/^(新陳)$/)!=null)compare_str+="代謝";
+            let xresult = [x[0],compare_str,x[1]];
+            return xresult;
+        });
+        data = data.map((x)=>{
+            let cost_code="";
+            if(x[1].match(/^(放射科|核醫科)$/)!=null&&x[0].match(/^(馬祖|南竿|北竿|東引|東莒|西莒)+/)==null){
+                cost_code = "MA001";
+            }else if(x[1].match(/^(放射科|核醫科)$/)!=null&&x[0].match(/^(馬祖|南竿|北竿|東引|東莒|西莒)+/)!=null){
+                cost_code = "MA019";
+            }else if(x[1].match(/^(眼科)$/)!=null){
+                cost_code = "MA027";
+            }else{
+                cost_code = "MA021";
+            }
+            return [x[0],x[1],x[2],cost_code];
+        });
+        console.log(data);
+        document.getElementById("la_dist_ID").value = data.length-1;
+        for(let i=0;i<data.length;i++){
+            let problem_level = `document.getElementById("ctl00_ContentPlaceHolder_cmbPriority_I").value = "Trivial";`;//問題嚴重度
+            let cost_code = `document.getElementById("ctl00_ContentPlaceHolder_cmbCostCode_I").value="${data[i][3]}";`;//成本代碼
+            let page_refresh = `document.getElementById("ctl00_ContentPlaceHolder_cmbCostCode_I").onchange();`;//刷新頁面
+            let problem_district = `document.getElementById("ctl00_ContentPlaceHolder_txtDivision_I").value = "${data[i][0]}";`;//提出院區
+            let problem_user = `document.getElementById("ctl00_ContentPlaceHolder_txtDepartment_I").value="${data[i][1]}";`;//提出單位及使用者
+            let problem_response = `document.getElementById("ctl00_ContentPlaceHolder_memHandleResult_I").value="${data[i][2]}";`;//處理結果
+            let problem_response_discription = `document.getElementById("ctl00_ContentPlaceHolder_memReason_I").value="${data[i][2]}";`;//處理結果說明(==處理結果)
+            //將勾選狀態選擇至已解決
+            let problem_check_box_noProblem = `document.getElementById("ctl00_ContentPlaceHolder_chkLogResolved_S_D").className = "dxICheckBox dxichSys dxWeb_edtCheckBoxChecked";`;
+            let problem_check_box_noProblem_check = `document.getElementById("ctl00_ContentPlaceHolder_chkLogResolved_S_D").className = "dxICheckBox dxichSys dxICBFocused dxh0 dxWeb_edtCheckBoxChecked";`;
+            let problem_check_box_Problem = `document.getElementById("ctl00_ContentPlaceHolder_chkLogUnResolved_S_D").className = "dxICheckBox dxichSys dxWeb_edtCheckBoxUnchecked";`;
+            if(data[i][0]!="")document.getElementById("command_generator_district").innerHTML+=`<div id="event_${i+1}" style="display:none">***** 事件 : [${i+1}] *****<br><br><span>${data[i][0]} : ${data[i][1]}</span><br><span>問題敘述:${data[i][2]}</span><br><!--<span>step1:</span><button onclick="copy_injection_command('refresh_command_${i+1}')">取得成本代碼注入指令</button><input type="hidden" id="refresh_command_${i+1}" value='${cost_code}${page_refresh}'><br>--><button onclick="copy_injection_command('injection_command_${i+1}')">取得表單注入指令</button><input type="hidden" id="injection_command_${i+1}" value = '${problem_district}${problem_user}${problem_response}${problem_response_discription}'><br><br>====事件[${i+1}]指令列結束====<br><br></div>`;//${problem_check_box_noProblem_check}${problem_check_box_noProblem}${problem_check_box_Problem}
+        }
+        document.getElementById("event_1").style.display="block";
+        //let command_generator="";
+        //document.getElementById("command_generator_district").innerHTML=`<p>${display_str}</p>`;
+    }
+    function copy_injection_command(elementID){
+        let Copy = document.querySelector(`#${elementID}`);
+        Copy.setAttribute("type","text");
+        Copy.select();
+        document.execCommand('copy');
+        Copy.setAttribute("type","hidden");
+        window.getSelection().removeAllRanges();
+    }
+    function last_dist(){
+        let ID = parseInt(document.getElementById("dist_ID").value);
+        if(ID==1)return 0;
+        let evo = "event_"+(ID-1);
+        let ev = "event_"+ID;
+        document.getElementById(`event_${ID-1}`).style.display="block";
+        document.getElementById(`event_${ID}`).style.display="none";
+        document.getElementById("dist_ID").value = `${ID-1}`;
+    }
+    function next_dist(){
+        let ID = parseInt(document.getElementById("dist_ID").value);
+        if(ID==document.getElementById("la_dist_ID").value)return 0;
+        document.getElementById(`event_${ID+1}`).style.display="block";
+        document.getElementById(`event_${ID}`).style.display="none";
+        document.getElementById("dist_ID").value = `${ID+1}`;
+    }
+    function reload(){
+        window.location.reload();
+    }
+</script>
